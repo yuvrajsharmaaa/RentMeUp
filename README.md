@@ -39,9 +39,19 @@ A modern, decentralized dashboard for managing and reserving campus resources bu
 - **Framer Motion** - Animation library
 
 ### Web3 Integration
-- **Wagmi** - React hooks for Ethereum
+- **Wagmi v2** - React hooks for Ethereum
 - **Viem** - TypeScript Ethereum library
 - **TanStack Query** - Data fetching and caching
+- **@wagmi/connectors** - MetaMask, WalletConnect, and more
+
+### Supported Wallets
+- **MetaMask** - Browser extension wallet (primary)
+- **WalletConnect** - Mobile wallets and cross-platform
+- **Injected Wallets** - Coinbase Wallet, Brave Wallet, etc.
+
+### Supported Networks
+- **Polygon (Mainnet)** - Chain ID: 137
+- **Sepolia (Testnet)** - Chain ID: 11155111
 
 ## 🚀 Getting Started
 
@@ -242,10 +252,19 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
 
 ## 🌐 Supported Networks
 
-- **Ethereum Mainnet** (Chain ID: 1)
-- **Sepolia Testnet** (Chain ID: 11155111)
+- **Polygon Mainnet** (Chain ID: 137) - Production network
+- **Sepolia Testnet** (Chain ID: 11155111) - Test network
 
-Add more networks in `config/wagmi.ts`.
+Add more networks in `config/wagmi.ts`:
+
+```typescript
+import { polygon, sepolia, mainnet } from 'wagmi/chains';
+
+export const config = createConfig({
+  chains: [polygon, sepolia, mainnet], // Add more chains
+  // ... rest of config
+});
+```
 
 ## 🔧 Customization Guide
 
@@ -318,17 +337,45 @@ npm run start
 
 ### Web3 Integration
 
-The app uses Wagmi v2 for Web3 functionality:
-- `useAccount()` - Get connected wallet address and chain info
-- `useConnect()` - Trigger wallet connection
-- `useDisconnect()` - Disconnect wallet
-- `useBalance()` - Get wallet balance (not currently used)
+The app uses Wagmi v2 for comprehensive Web3 functionality:
+
+#### Core Hooks
+- `useAccount()` - Get connected wallet address, chain info, and connection status
+- `useConnect()` - Trigger wallet connection with specific connector
+- `useDisconnect()` - Disconnect wallet and clear state
+- `useConnectors()` - Get list of available wallet connectors
+- `useSwitchChain()` - Switch between supported networks
+- `useChainId()` - Get current blockchain network ID
+
+#### Wallet Connectors
+1. **MetaMask Connector** - Optimized for MetaMask browser extension
+2. **Injected Connector** - Generic connector for any injected wallet
+3. **WalletConnect** - QR code connection for mobile wallets
+
+#### Error Handling
+The Header component includes comprehensive error handling for:
+- User rejection of connection request
+- Wallet not installed
+- Wrong network selection
+- Chain not configured
+- Connection timeout
+- Unsupported browser
+
+All errors display user-friendly notifications with actionable instructions.
+
+#### Chain Switching
+Users can switch between networks via dropdown menu:
+- Polygon (Mainnet) - Production environment
+- Sepolia (Testnet) - Development and testing
+
+Network switching triggers automatic wallet prompts to add/switch chains.
 
 ### State Management
 
 - **React Context**: Provided by Wagmi and Chakra
 - **TanStack Query**: For data fetching and caching
 - **React Hooks**: For local component state
+- **Cookie Storage**: Persists wallet connection across sessions
 
 ### Responsive Design
 
