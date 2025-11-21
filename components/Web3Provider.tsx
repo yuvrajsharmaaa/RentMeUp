@@ -22,7 +22,7 @@
 
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { config, isWalletInstalled } from '@/config/wagmi';
+import { config } from '@/config/wagmi';
 import { useEffect, useState, type ReactNode } from 'react';
 
 /**
@@ -89,7 +89,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     if (mounted) {
       // Small delay to ensure window.ethereum is injected
       const timer = setTimeout(() => {
-        const hasWallet = isWalletInstalled();
+        const hasWallet = typeof window !== 'undefined' && typeof (window as any).ethereum !== 'undefined';
         
         // Log wallet status for debugging
         if (!hasWallet) {

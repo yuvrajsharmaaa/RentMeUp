@@ -17,9 +17,10 @@
 
 'use client';
 
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, Toaster } from '@chakra-ui/react';
 import { Web3Provider } from '@/components/Web3Provider';
 import { theme } from '@/styles/theme';
+import { toaster } from '@/components/ui/toaster';
 
 /**
  * Providers Component
@@ -35,6 +36,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <Web3Provider>
       <ChakraProvider value={theme}>
         {children}
+        <Toaster toaster={toaster}>
+          {(toast) => toast.title}
+        </Toaster>
       </ChakraProvider>
     </Web3Provider>
   );

@@ -1,476 +1,346 @@
-/**
- * Header Component
- * 
- * Top navigation bar with comprehensive Web3 wallet integration featuring:
- * - Multi-wallet support (MetaMask, WalletConnect, other injected wallets)
- * - Network/chain switching (Polygon ↔ Sepolia)
- * - Connection status display
- * - Wallet address with formatted display
- * - Comprehensive error handling with user-friendly notifications
- * - Responsive design for mobile and desktop
- * 
- * Error Handling:
- * - Wallet not installed → Installation prompt
- * - User rejection → Friendly notification
- * - Wrong network → Network switch prompt
- * - Unsupported browser → Browser upgrade message
- * - Connection timeout → Retry option
- * 
- * Uses Wagmi v2 Hooks:
- * - useAccount: Get connected wallet info
- * - useConnect: Initiate wallet connections
- * - useDisconnect: Disconnect wallet
- * - useConnectors: Get available wallet connectors
- * - useSwitchChain: Switch between networks
- * - useChainId: Get current chain ID
- * 
- * @component
- */
-
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
   Heading,
   Button,
   Text,
-  HStack,
   Badge,
-  createToaster,
+  HStack,
+} from '@chakra-ui/react';
+import {
   MenuRoot,
   MenuTrigger,
   MenuContent,
   MenuItem,
-  Spinner,
-} from '@chakra-ui/react';
-import { 
-  useAccount, 
-  useConnect, 
-  useDisconnect, 
-  useConnectors,
-  useSwitchChain,
-  useChainId,
-} from 'wagmi';
+} from '@/components/ui/menu';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi';
 import { polygon, sepolia } from 'wagmi/chains';
-import { useEffect, useState } from 'react';
+import { toaster } from '@/components/ui/toaster';
 
 /**
- * Toast notification system
- * Displays user feedback for wallet actions and errors
+ * Error message constants for user-friendly notifications
  */
-const toaster = createToaster({
-  placement: 'top-end',
-  pauseOnPageIdle: true,
-});
-
-/**
- * Supported chains for network switching
- * Add more chains here to expand network support
- */
-const SUPPORTED_CHAINS = [polygon, sepolia];
-
-/**
- * Error Messages Map
- * User-friendly error messages for common wallet errors
- */
-const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
-  'User rejected': {
-    title: 'Connection Cancelled',
-    description: 'You rejected the connection request. Please try again when ready.',
-  },
-  'Connector not found': {
-    title: 'Wallet Not Found',
-    description: 'Please install MetaMask or another Web3 wallet to continue.',
-  },
-  'Chain not configured': {
-    title: 'Unsupported Network',
-    description: 'This network is not supported. Please switch to Polygon or Sepolia.',
-  },
-  'User denied': {
-    title: 'Request Denied',
-    description: 'You denied the request in your wallet.',
-  },
-  'Already processing': {
-    title: 'Request Pending',
-    description: 'Please complete or cancel the current wallet request first.',
-  },
-  'Unsupported chain': {
-    title: 'Wrong Network',
-    description: 'Please switch to a supported network (Polygon or Sepolia).',
-  },
+const ERROR_MESSAGES = {
+  NETWORK_SWITCH: 'Failed to switch network. Please try again.',
+  WALLET_CONNECT: 'Failed to connect wallet. Please try again.',
+  UNSUPPORTED_CHAIN: 'Unsupported network. Please switch to Polygon or Sepolia.',
+  USER_REJECTED: 'Connection request was rejected.',
+  WALLET_NOT_INSTALLED: 'No wallet detected. Please install MetaMask or another Web3 wallet.',
 };
 
 /**
  * Header Component
  * 
- * Displays app title, wallet connection controls, and network switcher
+ * Main navigation header with Web3 wallet integration.
+ * 
+ * Features:
+ * - Wallet connection/disconnection with injected provider (MetaMask, etc.)
+ * - Network switching between Polygon and Sepolia
+ * - Wallet address display with truncation
+ * - Error handling with user notifications
+ * - Responsive design
+ * 
+ * Hooks Used:
+ * - useAccount: Get connection status and wallet address
+ * - useConnect: Handle wallet connections
+ * - useDisconnect: Handle wallet disconnections
+ * - useSwitchChain: Switch between blockchain networks
+ * - useChainId: Get current connected network ID
  */
 export default function Header() {
-  // Wagmi hooks for wallet state and actions
-  const { address, isConnected, chain } = useAccount();
-  const { connect, error: connectError, isPending: isConnecting } = useConnect();
+  const { address, isConnected, connector } = useAccount();
+  const { connect, connectors, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
-  const connectors = useConnectors();
-  const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const { switchChain, error: switchError } = useSwitchChain();
   const chainId = useChainId();
+  
+  // State for managing UI
+  const [isClient, setIsClient] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  // Local state
-  const [isMounted, setIsMounted] = useState(false);
-
-  /**
-   * Client-side mounting effect
-   * Prevents hydration mismatches with SSR
-   */
+  // Ensure this only renders on client side
   useEffect(() => {
-    setIsMounted(true);
+    setIsClient(true);
   }, []);
 
   /**
-   * Connection Error Handler
-   * 
-   * Monitors connection errors and displays appropriate notifications.
-   * Maps technical errors to user-friendly messages.
-   */
-  useEffect(() => {
-    if (connectError) {
-      handleConnectionError(connectError);
-    }
-  }, [connectError]);
-
-  /**
-   * Handle connection errors with user-friendly notifications
-   * 
-   * @param {Error} error - The error object from wallet connection
-   */
-  const handleConnectionError = (error: Error) => {
-    const errorMessage = error.message.toLowerCase();
-    
-    // Find matching error message
-    let errorInfo = { 
-      title: 'Connection Error', 
-      description: 'Failed to connect wallet. Please try again.' 
-    };
-
-    for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
-      if (errorMessage.includes(key.toLowerCase())) {
-        errorInfo = value;
-        break;
-      }
-    }
-
-    // Special handling for MetaMask not installed
-    if (errorMessage.includes('no provider') || errorMessage.includes('not found')) {
-      errorInfo = {
-        title: 'MetaMask Not Installed',
-        description: 'Install MetaMask from metamask.io to continue.',
-      };
-    }
-
-    toaster.create({
-      title: errorInfo.title,
-      description: errorInfo.description,
-      type: 'error',
-      duration: 5000,
-    });
-
-    console.error('Wallet connection error:', error);
-  };
-
-  /**
-   * Handle wallet connection
-   * 
-   * Attempts to connect using the first available connector.
-   * Priority: MetaMask > Injected > WalletConnect
-   * 
-   * Error cases handled:
-   * - No wallet installed
-   * - User rejection
-   * - Already processing request
-   * - Unsupported browser
-   */
-  const handleConnect = async () => {
-    try {
-      // Check if any connector is available
-      if (connectors.length === 0) {
-        toaster.create({
-          title: 'No Wallet Found',
-          description: 'Please install MetaMask or another Web3 wallet extension.',
-          type: 'warning',
-          duration: 6000,
-        });
-        return;
-      }
-
-      // Find MetaMask connector first (preferred)
-      const metaMaskConnector = connectors.find(
-        (c) => c.name.toLowerCase().includes('metamask')
-      );
-
-      // Use MetaMask if available, otherwise use first connector
-      const connector = metaMaskConnector || connectors[0];
-
-      console.log('Connecting with:', connector.name);
-
-      // Initiate connection
-      connect({ connector });
-
-    } catch (error: any) {
-      handleConnectionError(error);
-    }
-  };
-
-  /**
-   * Handle wallet disconnection
-   * 
-   * Safely disconnects the wallet and clears state.
-   * Shows confirmation notification.
-   */
-  const handleDisconnect = () => {
-    try {
-      disconnect();
-      toaster.create({
-        title: 'Wallet Disconnected',
-        description: 'Your wallet has been disconnected successfully.',
-        type: 'info',
-        duration: 3000,
-      });
-    } catch (error: any) {
-      console.error('Disconnect error:', error);
-      toaster.create({
-        title: 'Disconnection Error',
-        description: 'Failed to disconnect wallet. Please try again.',
-        type: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
-  /**
-   * Handle network/chain switching
-   * 
-   * @param {number} targetChainId - The chain ID to switch to
-   * 
-   * Error cases handled:
-   * - Unsupported chain
-   * - User rejection
-   * - Chain not added to wallet
-   */
-  const handleChainSwitch = async (targetChainId: 137 | 11155111) => {
-    try {
-      console.log('Switching to chain:', targetChainId);
-      
-      await switchChain({ chainId: targetChainId });
-
-      const chainName = SUPPORTED_CHAINS.find(c => c.id === targetChainId)?.name || 'network';
-      
-      toaster.create({
-        title: 'Network Switched',
-        description: `Successfully switched to ${chainName}.`,
-        type: 'success',
-        duration: 3000,
-      });
-    } catch (error: any) {
-      console.error('Chain switch error:', error);
-      
-      let errorMsg = 'Failed to switch network. Please try again.';
-      
-      if (error.message?.includes('rejected') || error.message?.includes('denied')) {
-        errorMsg = 'You rejected the network switch request.';
-      } else if (error.message?.includes('Unrecognized chain')) {
-        errorMsg = 'This network is not added to your wallet. Please add it manually.';
-      }
-
-      toaster.create({
-        title: 'Network Switch Failed',
-        description: errorMsg,
-        type: 'error',
-        duration: 4000,
-      });
-    }
-  };
-
-  /**
    * Format wallet address for display
-   * 
-   * Truncates address to show first 6 and last 4 characters.
+   * Truncates address to show first 6 and last 4 characters
    * Example: 0x1234...5678
-   * 
-   * @param {string} addr - Full wallet address
-   * @returns {string} Formatted address
    */
-  const formatAddress = (addr: string): string => {
-    if (!addr) return '';
+  const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   /**
-   * Get color scheme for network badge
-   * 
-   * @param {number} chainId - Chain ID
-   * @returns {string} Chakra UI color scheme name
+   * Get human-readable chain name from chain ID
    */
-  const getChainColor = (chainId: number): string => {
-    switch (chainId) {
+  const getChainName = (id: number) => {
+    switch (id) {
       case polygon.id:
-        return 'purple'; // Polygon brand color
+        return 'Polygon';
       case sepolia.id:
-        return 'orange'; // Testnet indicator
+        return 'Sepolia';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  /**
+   * Get color scheme for chain badge
+   */
+  const getChainColor = (id: number) => {
+    switch (id) {
+      case polygon.id:
+        return 'purple';
+      case sepolia.id:
+        return 'orange';
       default:
         return 'gray';
     }
   };
 
-  // Prevent rendering until mounted (avoid hydration issues)
-  if (!isMounted) {
-    return null;
+  /**
+   * Handle network switching
+   * 
+   * Switches the connected wallet to the specified blockchain network.
+   * Shows success/error notifications.
+   * 
+   * @param targetChainId - The chain ID to switch to (137 for Polygon, 11155111 for Sepolia)
+   */
+  const handleChainSwitch = async (targetChainId: number) => {
+    try {
+      if (!isConnected) {
+        toaster.create({
+          title: 'Not Connected',
+          description: 'Please connect your wallet first.',
+          type: 'warning',
+          duration: 3000,
+        });
+        return;
+      }
+
+      await switchChain({ chainId: targetChainId });
+      
+      toaster.create({
+        title: 'Network Switched',
+        description: `Successfully switched to ${getChainName(targetChainId)}`,
+        type: 'success',
+        duration: 3000,
+      });
+    } catch (err: any) {
+      console.error('Chain switch error:', err);
+      
+      toaster.create({
+        title: 'Network Switch Failed',
+        description: err?.message || ERROR_MESSAGES.NETWORK_SWITCH,
+        type: 'error',
+        duration: 5000,
+      });
+    }
+  };
+
+  /**
+   * Handle wallet connection
+   * 
+   * Connects to the user's wallet using the injected connector.
+   * Handles various error scenarios:
+   * - User rejection
+   * - No wallet installed
+   * - Connection errors
+   */
+  const handleConnect = async () => {
+    try {
+      setIsConnecting(true);
+
+      // Check if any wallet is installed
+      if (!connectors || connectors.length === 0) {
+        toaster.create({
+          title: 'No Wallet Found',
+          description: ERROR_MESSAGES.WALLET_NOT_INSTALLED,
+          type: 'error',
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Use the first available connector (injected)
+      const connector = connectors[0];
+      
+      await connect({ connector });
+
+      toaster.create({
+        title: 'Wallet Connected',
+        description: 'Successfully connected to your wallet',
+        type: 'success',
+        duration: 3000,
+      });
+    } catch (err: any) {
+      console.error('Connection error:', err);
+      
+      // Handle user rejection
+      if (err?.message?.includes('rejected') || err?.message?.includes('denied')) {
+        toaster.create({
+          title: 'Connection Rejected',
+          description: ERROR_MESSAGES.USER_REJECTED,
+          type: 'warning',
+          duration: 3000,
+        });
+      } else {
+        toaster.create({
+          title: 'Connection Failed',
+          description: err?.message || ERROR_MESSAGES.WALLET_CONNECT,
+          type: 'error',
+          duration: 5000,
+        });
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  /**
+   * Handle wallet disconnection
+   */
+  const handleDisconnect = () => {
+    disconnect();
+    
+    toaster.create({
+      title: 'Wallet Disconnected',
+      description: 'Your wallet has been disconnected',
+      type: 'info',
+      duration: 3000,
+    });
+  };
+
+  // Show connection errors if any
+  useEffect(() => {
+    if (connectError) {
+      toaster.create({
+        title: 'Connection Error',
+        description: connectError.message || ERROR_MESSAGES.WALLET_CONNECT,
+        type: 'error',
+        duration: 5000,
+      });
+    }
+  }, [connectError]);
+
+  // Show network switch errors if any
+  useEffect(() => {
+    if (switchError) {
+      toaster.create({
+        title: 'Network Switch Error',
+        description: switchError.message || ERROR_MESSAGES.NETWORK_SWITCH,
+        type: 'error',
+        duration: 5000,
+      });
+    }
+  }, [switchError]);
+
+  // Don't render until client-side (prevents hydration errors)
+  if (!isClient) {
+    return (
+      <Box
+        as="header"
+        bg="white"
+        borderBottomWidth="1px"
+        borderColor="gray.200"
+        px={{ base: 4, md: 6 }}
+        py={4}
+      >
+        <Flex justify="space-between" align="center">
+          <Heading size="lg" color="brand.600">
+            🎓 Campus Resources
+          </Heading>
+          <Flex gap={3} align="center">
+            <Button variant="outline" colorScheme="gray" disabled>
+              Loading...
+            </Button>
+          </Flex>
+        </Flex>
+      </Box>
+    );
   }
 
   return (
     <Box
       as="header"
       bg="white"
-      borderBottom="1px"
+      borderBottomWidth="1px"
       borderColor="gray.200"
       px={{ base: 4, md: 6 }}
       py={4}
-      position="sticky"
-      top={0}
-      zIndex={10}
-      boxShadow="sm"
     >
-      <Flex
-        maxW="1400px"
-        mx="auto"
-        align="center"
-        justify="space-between"
-        direction={{ base: 'column', md: 'row' }}
-        gap={{ base: 3, md: 0 }}
-      >
-        {/* App Title/Branding */}
-        <Heading
-          size={{ base: 'md', md: 'lg' }}
-          color="brand.600"
-          fontWeight="bold"
-        >
-          🎓 Campus Resources Dashboard
+      <Flex justify="space-between" align="center">
+        {/* Logo/Title */}
+        <Heading size="lg" color="brand.600">
+          🎓 Campus Resources
         </Heading>
 
-        {/* Wallet Connection Section */}
-        <HStack gap={3} wrap="wrap" justify={{ base: 'center', md: 'flex-end' }}>
-          
-          {/* Network Switcher - Only visible when connected */}
+        {/* Wallet Connection UI */}
+        <Flex gap={3} align="center">
           {isConnected && (
-            <MenuRoot>
-              <MenuTrigger asChild>
-                <Button
-                  size={{ base: 'sm', md: 'md' }}
-                  variant="outline"
-                  colorScheme={chain ? getChainColor(chain.id) : 'gray'}
-                  disabled={isSwitching}
-                >
-                  {isSwitching ? (
-                    <HStack gap={2}>
-                      <Spinner size="sm" />
-                      <Text>Switching...</Text>
-                    </HStack>
-                  ) : (
-                    <HStack gap={2}>
-                      <Text>🌐</Text>
-                      <Text>{chain?.name || 'Unknown'}</Text>
-                    </HStack>
-                  )}
-                </Button>
-              </MenuTrigger>
-              <MenuContent>
-                {SUPPORTED_CHAINS.map((supportedChain) => (
+            <>
+              {/* Network Switcher Dropdown */}
+              <MenuRoot positioning={{ placement: 'bottom-end' }}>
+                <MenuTrigger asChild>
+                  <Button variant="outline" colorScheme={getChainColor(chainId)} size="sm">
+                    🌐 {getChainName(chainId)}
+                  </Button>
+                </MenuTrigger>
+                <MenuContent>
                   <MenuItem
-                    key={supportedChain.id}
-                    value={supportedChain.id.toString()}
-                    onClick={() => handleChainSwitch(supportedChain.id as 137 | 11155111)}
-                    bg={chainId === supportedChain.id ? 'gray.100' : 'white'}
-                    fontWeight={chainId === supportedChain.id ? 'bold' : 'normal'}
+                    value={polygon.id.toString()}
+                    onClick={() => handleChainSwitch(polygon.id)}
                   >
-                    <HStack gap={2} w="full">
-                      <Text>
-                        {chainId === supportedChain.id ? '✓' : '○'}
-                      </Text>
-                      <Text>{supportedChain.name}</Text>
-                      <Badge
-                        ml="auto"
-                        colorScheme={getChainColor(supportedChain.id)}
-                        fontSize="xs"
-                      >
-                        ID: {supportedChain.id}
-                      </Badge>
-                    </HStack>
+                    Polygon
                   </MenuItem>
-                ))}
-              </MenuContent>
-            </MenuRoot>
+                  <MenuItem
+                    value={sepolia.id.toString()}
+                    onClick={() => handleChainSwitch(sepolia.id)}
+                  >
+                    Sepolia Testnet
+                  </MenuItem>
+                </MenuContent>
+              </MenuRoot>
+
+              {/* Connected Address Display */}
+              <Badge colorScheme="green" fontSize="sm" px={3} py={2}>
+                <HStack gap={2}>
+                  <Text>🔗</Text>
+                  <Text fontFamily="mono">{formatAddress(address!)}</Text>
+                </HStack>
+              </Badge>
+
+              {/* Disconnect Button */}
+              <Button
+                onClick={handleDisconnect}
+                colorScheme="red"
+                variant="outline"
+                size="sm"
+              >
+                Disconnect
+              </Button>
+            </>
           )}
 
-          {/* Wallet Address Display - Desktop only */}
-          {isConnected && address && (
-            <Badge
-              colorScheme="green"
-              fontSize={{ base: 'xs', md: 'sm' }}
-              px={3}
-              py={2}
-              borderRadius="md"
-              display={{ base: 'none', sm: 'block' }}
+          {!isConnected && (
+            /* Connect Wallet Button */
+            <Button
+              onClick={handleConnect}
+              colorScheme="blue"
+              size="sm"
+              loading={isConnecting}
+              disabled={isConnecting}
             >
-              <HStack gap={2}>
-                <Text>🔗</Text>
-                <Text fontFamily="mono">{formatAddress(address)}</Text>
-              </HStack>
-            </Badge>
+              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+            </Button>
           )}
-
-          {/* Connect/Disconnect Button */}
-          <Button
-            onClick={isConnected ? handleDisconnect : handleConnect}
-            colorScheme={isConnected ? 'red' : 'brand'}
-            size={{ base: 'sm', md: 'md' }}
-            variant={isConnected ? 'outline' : 'solid'}
-            disabled={isConnecting}
-            minW="140px"
-          >
-            {isConnecting ? (
-              <HStack gap={2}>
-                <Spinner size="sm" />
-                <Text>Connecting...</Text>
-              </HStack>
-            ) : isConnected ? (
-              'Disconnect'
-            ) : (
-              'Connect Wallet'
-            )}
-          </Button>
-        </HStack>
-      </Flex>
-
-      {/* Mobile Wallet Address Display */}
-      {isConnected && address && (
-        <Flex
-          justify="center"
-          mt={2}
-          display={{ base: 'flex', sm: 'none' }}
-        >
-          <Badge
-            colorScheme="green"
-            fontSize="xs"
-            px={3}
-            py={1}
-            borderRadius="md"
-          >
-            <HStack gap={1}>
-              <Text>🔗</Text>
-              <Text fontFamily="mono">{formatAddress(address)}</Text>
-            </HStack>
-          </Badge>
         </Flex>
-      )}
+      </Flex>
     </Box>
   );
 }
