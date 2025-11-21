@@ -87,7 +87,7 @@ export default function DashboardPage() {
             </Heading>
             <Text color="blue.700">
               Connect your wallet to reserve resources and view your active reservations.
-              Click "Connect Wallet" in the top right to get started.
+              Click &quot;Connect Wallet&quot; in the top right to get started.
             </Text>
             <Text fontSize="sm" color="blue.600">
               <strong>Features:</strong> Reserve resources • Track reservations • Gasless transactions
@@ -132,16 +132,16 @@ export default function DashboardPage() {
         </Heading>
         <VStack align="flex-start" gap={2}>
           <Text fontSize="sm" color="gray.700">
-            <strong>1. Connect Wallet:</strong> Click "Connect Wallet" in the header and select your wallet (MetaMask, etc.)
+            <strong>1. Connect Wallet:</strong> Click &quot;Connect Wallet&quot; in the header and select your wallet (MetaMask, etc.)
           </Text>
           <Text fontSize="sm" color="gray.700">
-            <strong>2. Reserve Resource:</strong> Click "Reserve" on any available resource. This will stake a small amount of ETH.
+            <strong>2. Reserve Resource:</strong> Click &quot;Reserve&quot; on any available resource. This will stake a small amount of ETH.
           </Text>
           <Text fontSize="sm" color="gray.700">
             <strong>3. Use Resource:</strong> Once reserved, the resource is yours for up to 7 days.
           </Text>
           <Text fontSize="sm" color="gray.700">
-            <strong>4. Release & Refund:</strong> Click "Release" when done to get your stake back.
+            <strong>4. Release & Refund:</strong> Click &quot;Release&quot; when done to get your stake back.
           </Text>
         </VStack>
       </Box>

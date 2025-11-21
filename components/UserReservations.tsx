@@ -84,6 +84,7 @@ export default function UserReservations() {
       // Refresh reservations
       fetchUserReservations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess]);
 
   /**
@@ -132,6 +133,7 @@ export default function UserReservations() {
   // Fetch reservations on mount and when address changes
   useEffect(() => {
     fetchUserReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, contractAddress]);
 
   /**
@@ -208,7 +210,7 @@ export default function UserReservations() {
             No Active Reservations
           </Heading>
           <Text color="gray.500" textAlign="center">
-            You haven't reserved any resources yet. Browse available resources and reserve one to get started.
+            You haven&apos;t reserved any resources yet. Browse available resources and reserve one to get started.
           </Text>
         </VStack>
       </Box>
