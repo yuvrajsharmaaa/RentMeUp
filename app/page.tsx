@@ -1,47 +1,51 @@
 /**
- * Dashboard Home Page (Server Component)
+ * Dashboard Home Page
  * 
- * Main landing page displaying available campus resources in a responsive grid.
+ * Main landing page with:
+ * - User's active reservations at the top
+ * - Smart contract resource grid
+ * - Real-time data from blockchain
+ * - Filter and search capabilities
  * 
  * Features:
- * - Grid layout of resource cards (1-3 columns based on screen size)
- * - Displays all resources from placeholder data
- * - Responsive design for mobile, tablet, and desktop
- * - Statistics summary at the top
- * - Filter/search capabilities (can be extended)
+ * - Live data from CampusResourceNFT contract
+ * - User-specific reservation dashboard
+ * - Responsive grid layout (1-3 columns)
+ * - Contract interaction through ResourceCard components
  * 
- * Responsive grid:
- * - Mobile (base): 1 column
- * - Tablet (md): 2 columns
- * - Desktop (lg): 3 columns
+ * Note: For production, replace hardcoded resource IDs with dynamic loading
+ * from contract events or subgraph.
  * 
  * @page
  */
 
 'use client';
 
-import { Box, Heading, Text, SimpleGrid, Flex, Badge } from '@chakra-ui/react';
+import { Box, Heading, Text, SimpleGrid, Flex, Badge, VStack } from '@chakra-ui/react';
 import ResourceCard from '@/components/ResourceCard';
-import { SAMPLE_RESOURCES } from '@/utils/data';
-import { useMemo } from 'react';
+import UserReservations from '@/components/UserReservations';
+import { useAccount } from 'wagmi';
 
 /**
  * Dashboard Home Page Component
  * 
- * Renders the main dashboard with resource statistics and grid
+ * Renders the main dashboard with user reservations and all resources
  */
 export default function DashboardPage() {
+  const { isConnected } = useAccount();
+
   /**
-   * Calculate statistics from resources
-   * Memoized to avoid recalculation on every render
+   * Resource IDs to display
+   * 
+   * PRODUCTION TODO:
+   * - Fetch resource IDs from contract events (ResourceCreated)
+   * - Or use The Graph to index all resources
+   * - Or maintain a backend API that tracks resource creation
+   * 
+   * For now, we'll display a few placeholder resource IDs (1-6)
+   * Assuming resources were created during contract deployment
    */
-  const stats = useMemo(() => {
-    const total = SAMPLE_RESOURCES.length;
-    const available = SAMPLE_RESOURCES.filter(r => r.status === 'available').length;
-    const reserved = SAMPLE_RESOURCES.filter(r => r.status === 'reserved').length;
-    
-    return { total, available, reserved };
-  }, []);
+  const resourceIds = [1, 2, 3, 4, 5, 6];
 
   return (
     <Box maxW="1400px" mx="auto">
@@ -56,75 +60,41 @@ export default function DashboardPage() {
           Campus Resources
         </Heading>
         <Text fontSize={{ base: 'md', md: 'lg' }} color="gray.600">
-          Browse and reserve campus facilities, equipment, and spaces
+          Reserve campus facilities, equipment, and spaces using blockchain technology
         </Text>
       </Box>
 
-      {/* Statistics Summary */}
-      <Flex
-        gap={4}
-        mb={8}
-        direction={{ base: 'column', sm: 'row' }}
-        wrap="wrap"
-      >
-        <Box
-          bg="white"
-          p={4}
-          borderRadius="lg"
-          boxShadow="sm"
-          flex="1"
-          minW="200px"
-        >
-          <Text fontSize="sm" color="gray.600" mb={1}>
-            Total Resources
-          </Text>
-          <Text fontSize="3xl" fontWeight="bold" color="brand.600">
-            {stats.total}
-          </Text>
+      {/* User Reservations Section - Only shown when wallet is connected */}
+      {isConnected && (
+        <Box mb={8}>
+          <UserReservations />
         </Box>
-        
+      )}
+
+      {/* Info Banner for Non-Connected Users */}
+      {!isConnected && (
         <Box
-          bg="white"
-          p={4}
+          bg="blue.50"
+          border="1px"
+          borderColor="blue.200"
           borderRadius="lg"
-          boxShadow="sm"
-          flex="1"
-          minW="200px"
+          p={6}
+          mb={8}
         >
-          <Text fontSize="sm" color="gray.600" mb={1}>
-            Available
-          </Text>
-          <Flex align="center" gap={2}>
-            <Text fontSize="3xl" fontWeight="bold" color="green.600">
-              {stats.available}
+          <VStack align="flex-start" gap={2}>
+            <Heading size="md" color="blue.800">
+              🔗 Connect Your Wallet
+            </Heading>
+            <Text color="blue.700">
+              Connect your wallet to reserve resources and view your active reservations.
+              Click "Connect Wallet" in the top right to get started.
             </Text>
-            <Badge colorScheme="green" fontSize="md">
-              {Math.round((stats.available / stats.total) * 100)}%
-            </Badge>
-          </Flex>
-        </Box>
-        
-        <Box
-          bg="white"
-          p={4}
-          borderRadius="lg"
-          boxShadow="sm"
-          flex="1"
-          minW="200px"
-        >
-          <Text fontSize="sm" color="gray.600" mb={1}>
-            Reserved
-          </Text>
-          <Flex align="center" gap={2}>
-            <Text fontSize="3xl" fontWeight="bold" color="red.600">
-              {stats.reserved}
+            <Text fontSize="sm" color="blue.600">
+              <strong>Features:</strong> Reserve resources • Track reservations • Gasless transactions
             </Text>
-            <Badge colorScheme="red" fontSize="md">
-              {Math.round((stats.reserved / stats.total) * 100)}%
-            </Badge>
-          </Flex>
+          </VStack>
         </Box>
-      </Flex>
+      )}
 
       {/* Resources Grid */}
       <Box>
@@ -142,30 +112,39 @@ export default function DashboardPage() {
           gap={{ base: 4, md: 6 }}
           w="full"
         >
-          {SAMPLE_RESOURCES.map((resource) => (
-            <ResourceCard key={resource.id} resource={resource} />
+          {resourceIds.map((resourceId) => (
+            <ResourceCard key={resourceId} resourceId={resourceId} />
           ))}
         </SimpleGrid>
       </Box>
 
-      {/* Empty State - Only shown when no resources */}
-      {SAMPLE_RESOURCES.length === 0 && (
-        <Box
-          textAlign="center"
-          py={12}
-          px={6}
-          bg="white"
-          borderRadius="lg"
-          boxShadow="sm"
-        >
-          <Text fontSize="xl" color="gray.600" mb={2}>
-            No resources available
+      {/* Instructions for First-Time Users */}
+      <Box
+        mt={12}
+        bg="gray.50"
+        border="1px"
+        borderColor="gray.200"
+        borderRadius="lg"
+        p={6}
+      >
+        <Heading size="sm" color="gray.800" mb={3}>
+          📚 How to Use
+        </Heading>
+        <VStack align="flex-start" gap={2}>
+          <Text fontSize="sm" color="gray.700">
+            <strong>1. Connect Wallet:</strong> Click "Connect Wallet" in the header and select your wallet (MetaMask, etc.)
           </Text>
-          <Text fontSize="md" color="gray.500">
-            Check back later for new resources
+          <Text fontSize="sm" color="gray.700">
+            <strong>2. Reserve Resource:</strong> Click "Reserve" on any available resource. This will stake a small amount of ETH.
           </Text>
-        </Box>
-      )}
+          <Text fontSize="sm" color="gray.700">
+            <strong>3. Use Resource:</strong> Once reserved, the resource is yours for up to 7 days.
+          </Text>
+          <Text fontSize="sm" color="gray.700">
+            <strong>4. Release & Refund:</strong> Click "Release" when done to get your stake back.
+          </Text>
+        </VStack>
+      </Box>
     </Box>
   );
 }
