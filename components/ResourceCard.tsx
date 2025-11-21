@@ -404,7 +404,6 @@ export default function ResourceCard({ resourceId }: ResourceCardProps) {
             loadingText="Releasing..."
             disabled={isReleasing}
           >
-          >
             Release & Get Stake Back
           </Button>
         ) : (

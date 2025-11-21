@@ -35,7 +35,6 @@ import {
 import { useAccount } from 'wagmi';
 import { toaster } from '@/components/ui/toaster';
 import { ProgressBar } from '@/components/ui/progress';
-import { toaster } from '@/components/ui/toaster';
 import { 
   useReleaseResource,
   useContractAddress
